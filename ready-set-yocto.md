@@ -99,10 +99,13 @@ and deviate from those restrictions, you'll probably run into problems.
 
 # Dependencies #
 
-You'll need to install some tools to get started. For the apt users out there...
+You'll need to install some tools to get started. For the apt users out there, the [required build host packages](https://www.yoctoproject.org/docs/3.0/mega-manual/mega-manual.html#required-packages-for-the-build-host) can be fetched via:
 
 ~~~
- $ sudo apt install build-essential chrpath gawk git texinfo
+ $ sudo apt-get install gawk wget git-core diffstat unzip texinfo gcc-multilib \
+	build-essential chrpath socat cpio python python3 python3-pip python3-pexpect \
+	xz-utils debianutils iputils-ping python3-git python3-jinja2 libegl1-mesa libsdl1.2-dev \
+	pylint3 xterm
 ~~~
 
 # Build System and Required Layers #
@@ -134,7 +137,7 @@ Now lets check out the zeus branch of "Poky" - Yocto's Build system:
 The bitbake tool used by Yocto parses "recipes" that describe how to fetch,
 patch, configure, compile, install, and package software. Collections of related
 "recipes" are grouped into "layers" and their names are typically prefixed 
-with "*meta-"*.
+with "*meta-*".
 
 There's a layer dedicated to Raspberry Pi support. Let's fetch that. Note that
 we're still in `/portable/yocto/zeus` still!
@@ -188,7 +191,7 @@ provided by various "layers".
 
 ## A quick aside regarding MACHINE... #
 
-Take a look through the contents of the `meta-raspberrypi/machine/` directory. Observe
+Take a look through the contents of the `meta-raspberrypi/conf/machine/` directory. Observe
 that there's a `.conf` file for each revision of the Raspberry Pi, and in some cases,
 different variants of the same revision. 
 
@@ -221,8 +224,8 @@ This is done by changing the `MACHINE` definition in `local.conf` to:
 MACHINE = "raspberrypi3"
 ~~~
 
-Next, change the `DL_DIR` variable to point to a location where we should
-store downloaded files. I recommend setting this to something like...
+Next, uncomment and change the `DL_DIR` variable to point to a location where we should
+store downloaded files. I recommend setting this to the `downloads` directory we created earlier...
 
 ~~~
 DL_DIR = "/portable/yocto/zeus/downloads"
@@ -258,7 +261,7 @@ machine configuration files, and  "bbappend" files -- we'll learn about those mo
 For now, just roll with this, and know there's a "better" approach for builds
 that aren't just one-off experiments.
 
-For the Raspberry Pi, below two settings you'll want to consider enabling, via
+For the Raspberry Pi, you'll want to consider enabling the two settings below, via
 the documented additions to your `local.conf`. Note that there's a few more
 you may be interested in if you're planning to use I2C and SPI interfaces.
 
@@ -291,10 +294,10 @@ lines here for readability:
 ~~~
 $ bitbake-layers add-layer \
 	/portable/yocto/zeus/meta-openembedded/meta-oe \
- 	/portable/yocto/zeus/meta-openembedded/meta-multimedia \
- 	/portable/yocto/zeus/meta-openembedded/meta-networking \
- 	/portable/yocto/zeus/meta-openembedded/meta-python \
- 	/portable/yocto/zeus/meta-raspberrypi 
+	/portable/yocto/zeus/meta-openembedded/meta-multimedia \
+	/portable/yocto/zeus/meta-openembedded/meta-networking \
+	/portable/yocto/zeus/meta-openembedded/meta-python \
+	/portable/yocto/zeus/meta-raspberrypi
 ~~~
 
 Be sure to use full paths here. Bitbake may support otherwise nowadays, but
@@ -333,6 +336,7 @@ root. It won't include much more beyond that, however.
  $ bitbake core-image-minimal
 ~~~
 
+Note that this initial build may take several hours.
 
 # Copy core-image-minimal to an SD card #
 
@@ -390,7 +394,7 @@ functionality.
 In fact, the `core-image-base` recipe does just that, and may very well be a better
 starting point for your custom firmware images!
 
-To build this, run:
+To build this, return to your host machine and run:
 
 ~~~
 $ bitbake core-image-base
@@ -406,7 +410,7 @@ When that's done, look for the `core-image-base-raspberrypi3.rpi-sdimg` in
 
 Copy this to an SD card as you did earlier and boot it.  Run `lsmod` again and
 observe that a whole slew of drivers have now been included in the image. Note 
-that the HDMI interface is operational, along with WLAN and BlueTooth interfaces.
+that the HDMI interface is operational, along with WLAN and Bluetooth interfaces.
 
 # Creating your own layer #
 
@@ -442,7 +446,7 @@ In our case, we're going to use a *bbappend* file to change the `.config` file
 settings used to compile BusyBox.
 
 First, we need to create a new layer. Let's call it "meta-mypi" and create it
-using that `bitbake-layer` command we used earlier:
+using that `bitbake-layer` command we used [earlier](#edit-confbblayersconf):
 
 Let's name our layer "meta-mypi":
 
@@ -486,7 +490,7 @@ files that contain just a handful of `CONFIG_FEATURE_X=y` entries. For recipes
 designed to handle this this KConfig-like convention, we can simply use our bbappend
 to introduce a `.cfg` file that modifies our desired configuration tweak.
 
-*(Another quick aside...*)
+*(Another quick aside...)*
 
 We won't talk about it here, and don't get bogged down by it, but know that
 when using bbappend to tweak recipes (most of which don't use config fragments)
@@ -553,15 +557,15 @@ You only need to put two lines in this file. Ensure you include the leading
 whitespace in the string on the second line.
 
 ~~~
-FILESEXTRSPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
 SRC_URI_append := " file://xz.cfg"
 ~~~
 
-By setting the [`FILESEXTRASPATHS`](https://www.yoctoproject.org/docs/3.0/mega-manual/mega-manual.html#var-FILESEXTRAPATHS) variable, we're instructing the OpenEmbedded build system to look inside the directory in which our bbappend file resides (`${THISDIR}`), in a a subdirectory with the same name as our recipe, busybox. (Refer to the [glossary, regarding `${PN}`](https://www.yoctoproject.org/docs/3.0/mega-manual/mega-manual.html#var-PN)).
+By setting the [`FILESEXTRAPATHS`](https://www.yoctoproject.org/docs/3.0/mega-manual/mega-manual.html#var-FILESEXTRAPATHS) variable, we're instructing the OpenEmbedded build system to look inside the directory in which our bbappend file resides (`${THISDIR}`), in a a subdirectory with the same name as our recipe, busybox. (Refer to the [glossary, regarding `${PN}`](https://www.yoctoproject.org/docs/3.0/mega-manual/mega-manual.html#var-PN)).
 
 That's it, as far as the bbappend goes. The last thing to do is enable our new layer, since we haven't done that yet.
 
-One final note - it would be incredibly annoying if you had to create a new bbappend file for every patch, or even minor, revision bump to a piece of software. As noted [here](https://www.yoctoproject.org/docs/3.0/mega-manual/mega-manual.html#append-bbappend-files), you can actually use a "%" wildcard in the version portion of a recipe filename to match multiple version. We could have named our file, `busybox_1.31.%.bbappend`, for example, to match all versions in teh 1.31.x series.
+One final note - it would be incredibly annoying if you had to create a new bbappend file for every patch, or even minor, revision bump to a piece of software. As noted [here](https://www.yoctoproject.org/docs/3.0/mega-manual/mega-manual.html#append-bbappend-files), you can actually use a "%" wildcard in the version portion of a recipe filename to match multiple version. We could have named our file, `busybox_1.31.%.bbappend`, for example, to match all versions in the 1.31.x series.
 
 ## Enable our layer ##
 
@@ -573,6 +577,7 @@ Double check your `conf/bblayers.conf`, just to see that the change took effect.
 
 Now we can build our firmware image and our changes will take effect. First, we'll issue
 a "cleansstate" command to ensure busybox is reconfigured and rebuilt.
+(Note that there are *two* `s`'s, for clean *shared* state.)
 
 ~~~
 $ bitbake -c cleansstate busybox
@@ -588,7 +593,7 @@ redownloaded, which is what happens if you use "*cleanall*" instead of
 "*cleansstate*".  Using "*clean*" is essentially like running "make clean" --
 it will clean up compilation, but not configuration, artifacts.*
 
-When this completes, run `bitbake devshell busybox` again and confirm that the `.config`
+When this completes, run `bitbake -c devshell busybox` again and confirm that the `.config`
 file has indeed been updated to reflect our changes. Then write the newly regenerated 
 `core-image-base-raspberrypi3.rpi-sdimg` to an SD card, boot it, and observe that you can now
 use the "xz" and "unxz" commands in all their glory.
@@ -601,7 +606,7 @@ hardware.  Having done this, you'll hopefully now have a better sense of what's
 discussed in the documentation.
 
 If you ever get yourself into trouble, or find that a particular recipe is in a bad state,
-check out the `bitbake cleansstate <recipe>` and `bitbake cleanall <recipe>` commands.
+check out the `bitbake -c cleansstate <recipe>` and `bitbake -c cleanall <recipe>` commands.
 
 I'll leave it to you to look those up in the reference manual.
 
