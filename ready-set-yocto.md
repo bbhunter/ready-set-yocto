@@ -355,7 +355,7 @@ $ sync
 
 # Boot core-image-minimal #
 
-Attach a USB-UART adapter to the UART pins on the Raspberry Pi's expansion
+Attach a [USB-UART adapter](https://www.sparkfun.com/products/12731) to the UART pins on the Raspberry Pi's expansion
 connector as follows:
 
 ~~~
@@ -364,7 +364,11 @@ TX:  Pin 8
 RX:  Pin 10
 ~~~
 
-Open the UART up in minicom, screen, etc. Plug in in the SD card and power on. 
+More information about these UART pins, including a diagram, can be found on [pinout.xyz](https://pinout.xyz/pinout/uart).
+
+Open a connection to the UART up in your favorite terminal program, such as [minicom or screen](https://elinux.org/RPi_Serial_Connection#Connection_to_a_PC). (If you're using minicom, don't forget to turn off hardware flow control!)
+
+Plug in in the SD card and power on. 
 
 Via the UART, you should see boot text and then a login prompt akin to the
 following:
